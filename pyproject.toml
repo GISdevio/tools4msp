@@ -1,0 +1,39 @@
+[project]
+name = "tools4msp"
+version = "4.0.0-beta.1"
+dependencies = [
+  "django-import-export",
+  "matplotlib",
+  "jsonfield",
+  "pandas",
+  "geopandas",
+  "django-extensions",
+  "django-filter",
+  "django-import-export",
+  "django-rest-swagger",
+  "djangorestframework",
+  "djangorestframework-gis",
+  "django-cleanup",
+]
+requires-python = ">=3.8"
+authors = [
+  { name = "Stefano Menegon", email = "stefano.menegon@ismar.cnr.it" },
+  { name = "Francesco Frassinelli", email = "fraph24@gmail.com" },
+]
+description = "Tools 4 MSP"
+readme = "README.md"
+license = { text = "GPLv3" }
+keywords = ["Maritime", "Spatial", "Planning"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://data.tools4msp.eu/"
+Repository = "https://github.com/CNR-ISMAR/tools4msp"
+"Bug Tracker" = "https://github.com/CNR-ISMAR/tools4msp/issues"
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
