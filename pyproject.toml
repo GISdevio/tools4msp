@@ -2,7 +2,8 @@
 name = "tools4msp"
 version = "4.0.0-beta.1"
 dependencies = [
-  "django-import-export",
+  "Django==2.2.28",
+
   "matplotlib",
   "jsonfield",
   "pandas",
@@ -14,8 +15,18 @@ dependencies = [
   "djangorestframework",
   "djangorestframework-gis",
   "django-cleanup",
+  "django-import-export",
+
+  "rectifiedgrid @ file:///home/frafra/Code/rectifiedgrid",
+
+  "seaborn",
+  "slugify",
+  "rasterstats",
+  "SALib",
+  "django-treebeard",
+  "django-q",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
   { name = "Stefano Menegon", email = "stefano.menegon@ismar.cnr.it" },
   { name = "Francesco Frassinelli", email = "fraph24@gmail.com" },
