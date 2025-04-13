@@ -7,17 +7,11 @@ steplen = MP_Node.steplen
 alphabet = MP_Node.alphabet
 
 def update_path(apps, schema_editor):
-    class Node(MP_Node):
-        # may overwrite, should match new model:
-        # steplen = 4
-        # alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        # node_order_by = []
-        pass;
     model = apps.get_model("tools4msp","Pressure")
     db_alias = schema_editor.connection.alias
     
     for i, o in enumerate(model.objects.all(), 1):
-        o.path = Node._get_path(None, 1, i)
+        o.path = MP_Node._get_path(None, 1, i)
         o.save(using=db_alias)
 
 
