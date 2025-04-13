@@ -8,17 +8,11 @@ alphabet = MP_Node.alphabet
 node_order_by = ["code"]
 
 def update_path(apps, schema_editor):
-    class Node(MP_Node):
-        # may overwrite, should match new model:
-        # steplen = 4
-        # alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        # node_order_by = []
-        pass;
     CodedLabel = apps.get_model("tools4msp","CodedLabel")
     db_alias = schema_editor.connection.alias
     
     for i, group in enumerate(CodedLabel.objects.all(), 1):
-        group.path = Node._get_path(None, 1, i)
+        group.path = MP_Node._get_path(None, 1, i)
         group.save(using=db_alias)
 
 
