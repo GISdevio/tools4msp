@@ -2,7 +2,7 @@
 name = "tools4msp"
 version = "5.0.0"
 dependencies = [
-  "django-import-export",
+  "Django~=2.2",
   "matplotlib",
   "jsonfield",
   "pandas",
@@ -14,6 +14,16 @@ dependencies = [
   "djangorestframework",
   "djangorestframework-gis",
   "django-cleanup",
+  "django-import-export",
+  "rectifiedgrid @ git+https://github.com/GISdevio/rectifiedgrid.git@relaxed-cartopy",
+  "Cartopy>=0.21",
+  "seaborn",
+  "slugify",
+  "rasterstats",
+  "SALib",
+  "django-treebeard",
+  "django-q",
+  "drf-extensions",
 ]
 requires-python = "~=3.8"
 authors = [
