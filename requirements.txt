@@ -69,7 +69,7 @@ python-dateutil==2.8.0
 pytz==2019.1
 PyYAML==5.1.1
 rasterio==1.0.24
--e git+https://github.com/CNR-ISMAR/rectifiedgrid@50a901a835e3ea2dbec7926739b6695d15a5ac79#egg=rectifiedgrid
+git+https://github.com/GISdevio/rectifiedgrid.git@relaxed-cartopy
 requests==2.22.0
 Rtree==0.8.3
 scikit-learn==0.22.2.post1
@@ -91,7 +91,6 @@ sphinxcontrib-qthelp==1.0.2
 sphinxcontrib-serializinghtml==1.1.3
 sqlparse==0.3.0
 tablib==0.13.0
--e git+https://github.com/CNR-ISMAR/tools4msp.git@9cf20631aa6577b76d931e9e231eee0d7d1772aa#egg=tools4msp
 traitlets==4.3.2
 uritemplate==3.0.0
 urllib3==1.25.3
