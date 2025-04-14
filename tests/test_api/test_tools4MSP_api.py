@@ -1,3 +1,13 @@
+# /// script
+# requires-python = "~=3.8"
+# dependencies = [
+#   "requests",
+#   "matplotlib",
+#   "cartopy>0.21",
+#   "tools4msp_apiclient @ git+https://github.com/GISdevio/tools4msp_apiclient.git@pyproject-toml"
+# ]
+# ///
+
 import os
 import matplotlib.pyplot as plt
 import requests
