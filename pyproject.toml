@@ -15,7 +15,7 @@ dependencies = [
   "djangorestframework-gis",
   "django-cleanup",
   "django-import-export",
-  "rectifiedgrid",
+  "rectifiedgrid>=3.0",
   "seaborn",
   "slugify",
   "rasterstats",
