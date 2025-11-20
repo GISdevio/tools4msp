@@ -3374,7 +3374,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "pandas" },
     { name = "rasterstats" },
-    { name = "rectifiedgrid" },
+    { name = "rectifiedgrid", specifier = ">=3.0" },
     { name = "salib" },
     { name = "seaborn" },
     { name = "slugify" },
