@@ -14,7 +14,7 @@ import requests
 import time
 from tools4msp_apiclient import Tools4MSPApiCLient
 
-APIURL = "https://api.tools4msp.eu/docs/v2/"
+APIURL = os.getenv("TOOLS4MSPAPI_URL", "https://api.tools4msp.eu/docs/v2/")
 TOKEN = os.getenv("TOOLS4MSPAPI_TOKEN")
 
 tclient = Tools4MSPApiCLient(APIURL, TOKEN)
