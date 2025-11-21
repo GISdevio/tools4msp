@@ -247,7 +247,7 @@ def casestudy_run(request, object_pk):
 #         geo3035 = rg.transform(geo, 3857, 3035)
 #         # analysis area
 #         res = cs.grid_resolution
-#         aoi = rg.read_features([(geo3035, 1)], res, 3035, eea=True)
+#         aoi = rg.read_features([(geo3035, 1)], res, 3035, rounded_bounds=True)
 
 #     # area_geojson =
 #     # a.aa

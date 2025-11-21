@@ -155,7 +155,7 @@ def get_casestudy(ci_id, cellsize, basedir,
         # geo = get_aim(3035)
         geo = get_cs_area(ci_id, 3035)
 
-        grid = rg.read_features([geo], cellsize, 3035, eea=True)
+        grid = rg.read_features([geo], cellsize, 3035, rounded_bounds=True)
 
         # set the mask
         grid[grid == 0] = np.ma.masked
@@ -418,7 +418,7 @@ def get_adriplan_cics(ci_id, cellsize, datadir=None, casestudy=None, cache=True)
         # geo = get_aim(3035)
         geo = get_cs_area(ci_id, 3035)
 
-        grid = rg.read_features([geo], cellsize, 3035, eea=True)
+        grid = rg.read_features([geo], cellsize, 3035, rounded_bounds=True)
 
         # set the mask
         grid[grid == 0] = np.ma.masked
@@ -969,7 +969,7 @@ def get_adriatic_grid(to_srs):
     _adriatic.geo.transform(to_srs)
     geo = shape(simplejson.loads(_adriatic.geo.geojson))
 
-    return rg.read_features([geo], 1000, 3035, eea=True)
+    return rg.read_features([geo], 1000, 3035, rounded_bounds=True)
 
 
 def get_adriatic_italy_grid(to_srs):
@@ -977,7 +977,7 @@ def get_adriatic_italy_grid(to_srs):
     _adriatic.geo.transform(to_srs)
     geo = shape(simplejson.loads(_adriatic.geo.geojson))
 
-    return rg.read_features([geo], 1000, 3035, eea=True)
+    return rg.read_features([geo], 1000, 3035, rounded_bounds=True)
 
 
 def get_rer_geo(to_srs):
@@ -996,7 +996,7 @@ def get_rer_geo(to_srs):
 def get_rer_500_grid(to_srs):
     geo = get_rer_geo(to_srs)
     geos = [(shape(simplejson.loads(geo.geojson)), 1)]
-    return rg.read_features(geos, 500, 3035, eea=True)
+    return rg.read_features(geos, 500, 3035, rounded_bounds=True)
 
 
 def get_abruzzo_molise_adriatic_apulia_grid(to_srs):
@@ -1005,7 +1005,7 @@ def get_abruzzo_molise_adriatic_apulia_grid(to_srs):
         _d.geo.transform(to_srs)
         geos.append(shape(simplejson.loads(_d.geo.geojson)))
 
-    return rg.read_features(geos, 1000, 3035, eea=True)
+    return rg.read_features(geos, 1000, 3035, rounded_bounds=True)
 
 
 def get_conflict_by_uses(use1, use2):

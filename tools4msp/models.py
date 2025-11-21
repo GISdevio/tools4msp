@@ -1043,7 +1043,7 @@ class CaseStudy(models.Model):
             return None
         else:
             gdf = self.domain_area_to_gdf()
-            l = rg.read_df(gdf, self.resolution, epsg=3035, eea=True)
+            l = rg.read_df(gdf, self.resolution, epsg=3035, rounded_bounds=True)
             l.mask = l==0
             code = 'GRID'
             cl = CodedLabel.objects.get(code=code)
@@ -2162,7 +2162,7 @@ class Dataset(models.Model):
                 compute_area = True
             return layer_to_raster(l, self.grid, column=column, compute_area=compute_area)
         if self.res is not None:
-            return layer_to_raster(l, res=self.res, column=column, eea=True)
+            return layer_to_raster(l, res=self.res, column=column, rounded_bounds=True)
 
     def get_layers_qs(self):
         layers = []
