@@ -3,6 +3,7 @@
 import sys
 import logging
 import numpy as np
+import xarray as xr
 import pandas as pd
 from os import path, listdir
 from .casestudy import CaseStudyBase, aggregate_layers_to_gdf
@@ -144,11 +145,9 @@ class CEACaseStudy(CaseStudyBase):
                 usepressure = _pressure_layer.copy()
                 # print("@@@", np.nansum(usepressure), np.nanmax(usepressure), w.weight)
                 if self.get_outputgrid() is not None:
-                    # layer[~(layer.mask) & (layer > 0)] = 1
-                    usepressure.mask = (self.get_outputgrid().mask) | (self.get_outputgrid()==0)
-                    # usepressure.mask = self.get_outputgrid().mask.copy()
+                    usepressure = xr.DataArray(usepressure).where(xr.DataArray(self.get_outputgrid()) > 0)
                 else:
-                    usepressure.mask = (self.grid.mask) | (self.grid==0)
+                    usepressure = xr.DataArray(usepressure).where(xr.DataArray(self.grid) > 0)
                 usepressure.flattening_outliers(0.98)
                 if out_pressures.get(precode) is None:
                     out_pressures[precode] = usepressure.copy()
@@ -360,7 +359,7 @@ class CEACaseStudy(CaseStudyBase):
                 if fname == 'cea-WEIGHTS': # deprecated
                     _df = pd.read_json(filepath)
                     if 'c' not in _df.columns:
-                        _df['c'] = np.NaN
+                        _df['c'] = np.nan
                     _df.rename(columns={'u': 'usecode',
                                         'p': 'precode',
                                         'd': 'distance',
@@ -371,7 +370,7 @@ class CEACaseStudy(CaseStudyBase):
                 elif fname == 'cea-PRESSURE-WEIGHTS':
                     _df = pd.read_json(filepath)
                     if 'c' not in _df.columns:
-                        _df['c'] = np.NaN
+                        _df['c'] = np.nan
                     _df.rename(columns={'use': 'usecode',
                                         'pressure': 'precode',
                                         'distance': 'distance',
@@ -382,7 +381,7 @@ class CEACaseStudy(CaseStudyBase):
                 elif fname == 'cea-SENS': # deprecated
                     _df = pd.read_json(filepath)
                     if 'c' not in _df.columns:
-                        _df['c'] = np.NaN
+                        _df['c'] = np.nan
                     _df.rename(columns={'e': 'envcode',
                                         'p': 'precode',
                                         's': 'sensitivity',
@@ -397,7 +396,7 @@ class CEACaseStudy(CaseStudyBase):
                 elif fname == 'cea-SENSITIVITIES':
                     _df = pd.read_json(filepath)
                     if 'c' not in _df.columns:
-                        _df['c'] = np.NaN
+                        _df['c'] = np.nan
                     _df.rename(columns={'env': 'envcode',
                                         'pressure': 'precode',
                                         'sensitivity': 'sensitivity',

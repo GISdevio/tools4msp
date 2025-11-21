@@ -6,6 +6,8 @@ import re
 import simplejson
 import itertools
 import numpy as np
+import xarray as xr
+import rioxarray
 import operator
 import scipy
 import pandas as pd
@@ -42,20 +44,73 @@ from .modules.casestudy import CaseStudyBase
 def get_layerinfo(fpath):
     l = rg.read_raster(fpath)
     percentiles = [5, 10, 25, 50, 75, 90, 95]
+
+    # Deterministic xarray/rioxarray usage - assume rioxarray is available.
+    b = l.rio.bounds()
+    bounds = (b[0], b[1], b[2], b[3])
+    trans = l.rio.transform()
+    resolution = abs(trans.a)
+    crs = l.rio.crs
+    projection = crs.to_proj4()
+
+    arr = np.asarray(l)
     layerinfo = {
-        'bounds': l.bounds,
-        'resolution': l.resolution,
-        'projection': l.crs.to_proj4(),
+        'bounds': bounds,
+        'resolution': resolution,
+        'projection': projection,
         'epsg': 3035, # Makeit dynamic
-        'minval': float(np.nanmin(l)),
-        'maxval': float(np.nanmax(l)),
-        'meanval': float(np.nanmean(l)),
-        'sumval': float(np.nansum(l)),
+        'minval': float(np.nanmin(arr)),
+        'maxval': float(np.nanmax(arr)),
+        'meanval': float(np.nanmean(arr)),
+        'sumval': float(np.nansum(arr)),
         # WARNING: il percentile NaN dava problemi nella serializzazione del caso di studio
         # forse bisogno usare nanpercentile
         # 'percentiles': {p[0]: p[1]  for p in zip(percentiles, np.percentile(l, percentiles))},
-    }  
+    }
     return layerinfo
+
+def ensure_dataarray(obj) -> xr.DataArray:
+    """Return an xarray.DataArray for the given object.
+
+    If ``obj`` is already a DataArray, it's returned unchanged. Otherwise
+    the function constructs a DataArray from ``np.asarray(obj)``.
+    """
+    if isinstance(obj, xr.DataArray):
+        return obj
+    return xr.DataArray(np.asarray(obj))
+
+def write_dataarray_to_field(file_field, da: xr.DataArray, file_ext: str = 'tiff'):
+    """Write a DataArray to a Django FileField using rioxarray.
+
+    This writes to a temporary file with ``da.rio.to_raster`` and then saves
+    the file contents into the provided `file_field`.
+    """
+    import tempfile
+    import os
+    from django.core.files import File as DjFile
+
+    tf = tempfile.NamedTemporaryFile(suffix='.' + file_ext, delete=False)
+    tf.close()
+    da.rio.to_raster(tf.name)
+    with open(tf.name, 'rb') as f:
+        django_file = DjFile(f)
+        fname = f'file.{file_ext}'
+        file_field.save(fname, django_file)
+    os.remove(tf.name)
+
+def get_da_bounds(da: xr.DataArray):
+    """Return (minx, miny, maxx, maxy) bounds from a DataArray using rioxarray."""
+    b = da.rio.bounds()
+    return (b[0], b[1], b[2], b[3])
+
+def get_da_resolution(da: xr.DataArray):
+    """Return absolute x resolution from the DataArray affine transform."""
+    return abs(da.rio.transform().a)
+
+def get_da_projection(da: xr.DataArray):
+    """Return a proj4-style projection string from DataArray's CRS."""
+    crs = da.rio.crs
+    return crs.to_proj4()
 
 def plot_heatmap(matrix,
                  xcol,
@@ -249,15 +304,15 @@ def get_use_raster(ci_id, use, grid):
     raster = None
     if ci_id == 15 and use.label == 'Maritime Transport':
         raster = get_traffic(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id == 15 and use.id == 85:
         raster = get_trawling3(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id == 15 and use.id == 87:
         raster = get_small_scale_fishery(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif (ci_id == 15 or ci_id == 16) and use.label == 'Military Areas':
         raster = layers_to_raster(use_layers, grid, compute_area=False)
@@ -280,48 +335,48 @@ def get_use_raster(ci_id, use, grid):
         return raster
     elif ci_id == 15 and use.label == 'Oil & Gas extraction':
         raster = get_oil_and_gas_extraction(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif (ci_id == 15 or ci_id == 18) and use.id == 76:
         raster = get_coastal_and_maritime_tourism(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif (ci_id == 15 or ci_id == 18) and use.label == 'Naval base activities':
         raster = get_naval_base_activities(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     # Case Study RER - Cumulative Impact
     elif ci_id == 18 and use.label == 'Maritime Transport':
         raster = get_traffic_orig(grid, 3)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id == 18 and use.id == 87:
         raster = get_small_scale_fishery_01_12(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         military_layers = get_use_layers(ci_id, 88)
         military = layers_to_raster(military_layers, grid, compute_area=False)
         raster[military>0] = 0
         return raster
     elif ci_id == 18 and use.label == 'Flying':
         raster = get_flying(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id == 18 and use.id == 85:
         raster = get_trawling_gsa(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     # Case Study RER COEXIST + Italian Adriatic COEXIST
     elif ci_id in (16, 21) and use.label == 'Maritime Transport':
         raster = get_traffic_orig(grid, 3)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id in (16, 21) and use.id == 85:
         raster = get_trawling_gsa(grid, 30)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif ci_id in (16, 21) and use.label == 'Flying':
         raster = get_flying(grid, 10)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     else:
         return layers_to_raster(use_layers, grid, compute_area=False)
@@ -334,22 +389,22 @@ def get_env_raster(ci_id, env, grid):
     if env.id == 26:
         print("Nursery")
         raster = get_nursery_habitats(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     if env.label == 'TU - Turtles':
         print("Turtles")
         raster = get_turtles(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif env.label == 'GDR - Giant devil ray':
         print("Ray")
         raster = get_ray(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif env.label == 'MM - Marine mammals':
         print("Mammals")
         raster = get_marine_mammals(grid)
-        raster.mask = grid.mask
+        raster = xr.DataArray(raster).where(~xr.DataArray(grid.mask))
         return raster
     elif env.label == 'SB - Seabirds':
         print("Seabirds")
@@ -756,28 +811,28 @@ def layer_to_raster(l, grid=None, res=None, **kwargs):
         elif l.typename == 'geonode:traffic_density_lines_gener_2014_2015_ais_3857_nocolor':
             _r = rg.read_raster('/var/www/geonode/uploaded/layers/traffic_density_lines_gener_2014_2015_ais_3857_nocolor.tiff')
             raster = grid.copy()
-            raster.reproject(_r.astype(np.float))
+            raster.reproject(_r.astype(float))
             raster.positive()
             print("NEW TRAFFIC")
             return raster
         elif l.typename == 'geonode:malta_aisdata_hm250_r500':
             _r = rg.read_raster('/var/www/geonode/uploaded/layers/malta_aisdata_hm250_r500.tif')
             raster = grid.copy()
-            raster.reproject(_r.astype(np.float))
+            raster.reproject(_r.astype(float))
             raster.positive()
             print("TRAFFIC MALTA")
             return raster
         elif l.typename == 'geonode:loggerheadturtlesclean_quartico_30km_100m_clip':
             _r = rg.read_raster('/var/www/geonode/uploaded/layers/loggerheadturtlesclean_quartico_30km_100m_clip.tif')
             raster = grid.copy()
-            raster.reproject(_r.astype(np.float))
+            raster.reproject(_r.astype(float))
             raster.positive()
             print("NEW TURTLES")
             return raster
         elif l.typename == 'geonode:marinemammals_quartico_60km_100m_clip':
             _r = rg.read_raster('/var/www/geonode/uploaded/layers/marinemammals_quartico_60km_100m_clip_UdCUElw.tif')
             raster = grid.copy()
-            raster.reproject(_r.astype(np.float))
+            raster.reproject(_r.astype(float))
             raster.positive()
             print("NEW MAMMALS")
             return raster

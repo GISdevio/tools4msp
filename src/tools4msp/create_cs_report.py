@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas import ExcelWriter
+from tools4msp.models import CaseStudy, CodedLabel
 
 
 cs = CaseStudy.objects.get(pk=240)

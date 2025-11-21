@@ -113,7 +113,7 @@ class Command(BaseCommand):
 
 def clone_context(old_context_label, new_context_label, overwrite):
     if new_context_label is not None:
-        context, created = Context.objects.get_or_create(label=new_label)
+        context, created = Context.objects.get_or_create(label=new_context_label)
 
 
         

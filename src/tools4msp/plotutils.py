@@ -1,5 +1,6 @@
 import math
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import numpy as np
 from .utils import write_to_file_field
 try:
@@ -33,19 +34,18 @@ def plot_map(raster, file_field=None, ceamaxval=None, logcolor=True, cmap="jet",
         raster = raster.flattening_outliers(quantile_outliers)
         extend='max'
 
-    fig = plt.figure(figsize=get_map_figure_size(raster.bounds))
-    ax, mapimg = raster.plotmap(  # ax=ax,
-        cmap=cmap,
-        logcolor=logcolor,
-        legend=True,
-        # maptype='minimal',
-        grid=grid, gridrange=1,
-        vmax=ceamaxval,
-        coast=coast,
-        alpha=alpha,
-        vmin=vmin,
-        norm=norm,
-        extend=extend)
+    fig = plt.figure(figsize=get_map_figure_size(raster.rio.bounds()))
+    ax = fig.add_subplot(1, 1, 1)
+    plot_norm = norm
+    if logcolor:
+        _vmin = vmin if (vmin is not None and vmin > 0) else 1e-6
+        plot_norm = colors.LogNorm(vmin=_vmin, vmax=ceamaxval)
+    mapimg = raster.plot.imshow(ax=ax,
+                                cmap=cmap,
+                                norm=plot_norm,
+                                add_colorbar=True,
+                                vmin=vmin,
+                                vmax=ceamaxval)
     fig.tight_layout()
 
     # ax.add_image(cimgt.Stamen('toner-lite'), get_zoomlevel(raster.geobounds))

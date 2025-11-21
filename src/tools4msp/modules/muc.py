@@ -3,6 +3,7 @@
 import logging
 import itertools
 import numpy as np
+import xarray as xr
 import pandas as pd
 from os import path
 from os import path, listdir
@@ -44,7 +45,7 @@ class MUCCaseStudy(CaseStudyBase):
         logger.debug("pivot_layer = {}".format(pivot_layer))
         # TODO using outputmask
         couses_data = []
-        muc = np.zeros_like(self.grid)
+        muc = xr.DataArray(np.zeros_like(self.grid))
         alluses_iter = self.get_uses().iterrows()
         for _use1, _use2 in itertools.combinations(alluses_iter, 2):
             use1id, use1 = _use1
@@ -56,22 +57,23 @@ class MUCCaseStudy(CaseStudyBase):
                 continue
 
             score = self.get_potential_conflict_score(use1id, use2id)
-            if intensity:
-                l1 = use1.layer
-                l2 = use2.layer
-            else:
-                l1 = use1.layer.copy()
-                l2 = use2.layer.copy()
-                # check mask to avoid unmask on assignment
-                l1[~(l1.mask) & (l1 > 0)] = 1
-                l2[~(l2.mask) & (l2 > 0)] = 1
-            _score = l1 * l2 * score
-            l1.mask = self.grid == 0
-            l2.mask = self.grid == 0
-            if outputmask is not None:
-                _score.mask = outputmask
+            # convert layers to xarray DataArray
+            l1 = xr.DataArray(use1.layer.copy()) if not intensity else xr.DataArray(use1.layer)
+            l2 = xr.DataArray(use2.layer.copy()) if not intensity else xr.DataArray(use2.layer)
+            if not intensity:
+                # set values > 0 (and not null) to 1
+                l1 = xr.where((~l1.isnull()) & (l1 > 0), 1, l1)
+                l2 = xr.where((~l2.isnull()) & (l2 > 0), 1, l2)
 
-            muc += _score
+            _score = l1 * l2 * score
+
+            # Apply mask where grid==0 deterministically with xarray
+            grid_da = xr.DataArray(self.grid)
+            _score = _score.where(grid_da != 0)
+            if outputmask is not None:
+                _score = _score.where(~xr.DataArray(outputmask))
+
+            muc = muc + _score
 
             couses_data.append({'u1': use1.code,
                                 'u2': use2.code,
@@ -79,8 +81,8 @@ class MUCCaseStudy(CaseStudyBase):
                                 # convert to int for allowing json serialization
                                 'ncells': int(_score[_score > 0].count())
             })
-        muc.fill_underlying_data(0)
-        muc.mask = (self.grid.mask) | (self.grid==0)
+        # Ensure muc has NaNs where grid==0
+        muc = muc.where(xr.DataArray(self.grid) != 0)
         self.outputs['muc'] = muc
         self.outputs['muc_couses'] = couses_data
         self.outputs['muc_totalscore'] = muc.sum()

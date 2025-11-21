@@ -4,6 +4,7 @@ from slugify import slugify
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import xarray as xr
 try:
     import rectifiedgrid as rg
 except:
@@ -35,8 +36,9 @@ def read_casestudy(csmetadata):
 
 def aggregate_layers_to_gdf(layers, step=1, melt=False):
     grid = layers.get('GRID') 
-    bounds = grid.bounds
-    resolution = grid.resolution
+    b = grid.rio.bounds()
+    bounds = (b[0], b[1], b[2], b[3])
+    resolution = abs(grid.rio.transform().a)
     xcoords = np.linspace(bounds[0]+resolution/2, bounds[2]-resolution/2, grid.shape[1])
     # y is in reverse order
     ycoords = np.linspace(bounds[3]-resolution/2, bounds[1]+resolution/2, grid.shape[0])    
@@ -284,21 +286,42 @@ class CaseStudyBase(object):
         self.load_grid()
 
     def set_mask(self, mask, overwrite=True):
-        """Apply a mask to grid, all layers and availability areas"""
-        self.grid.mask = mask.copy()
+        """Apply a mask to grid, all layers and availability areas using xarray-only.
+
+        This function requires that `self.grid`, every `layer` and every
+        `availability` present in `self.layers` are `xarray.DataArray`.
+        It will raise a `TypeError` if a non-DataArray object is encountered.
+        """
+        mask_da = mask if isinstance(mask, xr.DataArray) else xr.DataArray(np.asarray(mask))
+        mask_bool = mask_da.astype(bool)
+
+        # grid must be a DataArray
+        if not isinstance(self.grid, xr.DataArray):
+            raise TypeError('set_mask requires self.grid to be an xarray.DataArray')
+
+        if overwrite:
+            self.grid = self.grid.where(~mask_bool)
+        else:
+            self.grid = self.grid.where(~(self.grid.isnull() | mask_bool))
+
+        # apply to layers and availabilities (must be DataArray)
         for idx, l in self.layers.iterrows():
+            if not isinstance(l.layer, xr.DataArray):
+                raise TypeError(f'set_mask requires layer {idx} to be xarray.DataArray')
             if overwrite:
-                l.layer.mask = np.ma.nomask
-                l.layer.mask = mask.copy()
+                new_layer = l.layer.where(~mask_bool)
             else:
-                l.layer[mask] = np.ma.masked
-            #
+                new_layer = l.layer.where(~(l.layer.isnull() | mask_bool))
+            self.layers.at[idx, 'layer'] = new_layer
+
             if l.availability is not None:
+                if not isinstance(l.availability, xr.DataArray):
+                    raise TypeError(f'set_mask requires availability for {idx} to be xarray.DataArray')
                 if overwrite:
-                    l.availability.mask = np.ma.nomask
-                    l.availability.mask = mask.copy()
+                    new_av = l.availability.where(~mask_bool)
                 else:
-                    l.availability[mask] = np.ma.masked
+                    new_av = l.availability.where(~(l.availability.isnull() | mask_bool))
+                self.layers.at[idx, 'availability'] = new_av
 
     def set_grid(self, grid, resampling=Resampling.nearest):
         """Reproject the self on the new grid"""

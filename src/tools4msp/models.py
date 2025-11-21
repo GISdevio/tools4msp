@@ -27,7 +27,7 @@ import rectifiedgrid as rg
 
 from jsonfield import JSONField
 from .processing import Expression
-from .utils import layer_to_raster, get_sensitivities_by_rule, get_conflict_by_uses, get_layerinfo
+from .utils import layer_to_raster, get_sensitivities_by_rule, get_conflict_by_uses, get_layerinfo, write_dataarray_to_field
 from .modules.casestudy import CaseStudyBase as CS, aggregate_layers_to_gdf
 import itertools
 import datetime
@@ -57,6 +57,7 @@ except:
     pass
 import matplotlib.animation as animation
 import numpy as np
+import xarray as xr
 # import rectifiedgrid as rg
 from django.core.exceptions import ObjectDoesNotExist
 import math
@@ -176,7 +177,7 @@ def _run_sua(csr, nparams=20, nruns=100, bygroup=True, njobs=1, calc_second_orde
                             kwargs_run=kwargs_run)
 
     module_cs_sua.cv[module_cs_sua.mean<0.01] = 0
-    module_cs_sua.cv.mask = module_cs_sua.mean.mask.copy()
+    module_cs_sua.cv = xr.DataArray(module_cs_sua.cv).where(~xr.DataArray(module_cs_sua.mean).isnull())
     
     layers = {'MAPCEA-SUA-MEAN': module_cs_sua.mean,
               'MAPCEA-SUA-CV': module_cs_sua.cv,}
@@ -479,8 +480,8 @@ def _run(_csr, runtypelevel=3):
         # CEASCORE histogram
         cl = CodedLabel.objects.get(code='HISTCEASCORE')
         csr_o = csr.outputs.create(coded_label=cl)
-        data = ci.flatten()
-        data = data[data.mask == False]
+        data = np.asarray(ci).ravel()
+        data = data[~np.isnan(data)]
         n, bins, patches = plt.hist(data, bins=15)
         histdata = {'n': n.tolist(), 'bins': bins.tolist()}
         write_to_file_field(csr_o.file, lambda buf: json.dump(histdata, buf), 'json', is_text_file=True)
@@ -616,7 +617,7 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='MUCSCORE')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         write_to_file_field(csr_ol.file, out.write_raster, 'tiff')
-        plt.figure(figsize=get_map_figure_size(out.bounds))
+        plt.figure(figsize=get_map_figure_size(out.rio.bounds()))
         ax, mapimg = out.plotmap(#ax=ax,
                    cmap='jet',
                    logcolor=True,
@@ -681,8 +682,8 @@ def _run(_csr, runtypelevel=3):
         module_cs.run(scenario=1)
         time_rasters = module_cs.outputs['time_rasters']
         # collect statistics
-        vmaxcum = np.asscalar(max([np.nanmax(r[1]) for r in time_rasters]))
-        vmax = np.asscalar(max([np.nanmax(r[2]) for r in time_rasters]))
+        vmaxcum = float(max([np.nanmax(r[1]) for r in time_rasters]))
+        vmax = float(max([np.nanmax(r[2]) for r in time_rasters]))
 
         CRS = cartopy.crs.Mercator()
 
@@ -697,7 +698,7 @@ def _run(_csr, runtypelevel=3):
             raster = time_rasters[iternum][rindex]
             raster = raster.to_srs_like(cropped)
             # raster[:] = 0
-            raster.mask = raster <= 0.0001
+            raster = xr.DataArray(raster).where(raster > 0.0001)
             plt.title("Hours: {}".format(time_step))
             # remove legends
             legend = True
@@ -1044,7 +1045,7 @@ class CaseStudy(models.Model):
         else:
             gdf = self.domain_area_to_gdf()
             l = rg.read_df(gdf, self.resolution, epsg=3035, rounded_bounds=True)
-            l.mask = l==0
+            l = xr.DataArray(l).where(xr.DataArray(l) != 0)
             code = 'GRID'
             cl = CodedLabel.objects.get(code=code)
             # this override previous results
@@ -1052,7 +1053,7 @@ class CaseStudy(models.Model):
             csr_ol.file = None
             csr_ol.thumbnail = None
             csr_ol.save()
-            write_to_file_field(csr_ol.file, l.write_raster, 'tiff')
+            write_dataarray_to_field(csr_ol.file, l, file_ext='tiff')
             plot_map(l, csr_ol.thumbnail, ceamaxval=None, logcolor=False)
 
     def set_layer_weights(self, cl_sorter=None):
@@ -1705,11 +1706,9 @@ class CaseStudyLayer(LayerInfoMixin):
     def mask_layer_with_grid(self):
         grid = self.casestudy.get_grid()
         raster = rg.read_raster(self.file.path)
-        raster[np.isnan(raster)] = 0
-        raster = raster.astype(float)
-        raster[grid.mask] = np.nan
-        raster.mask = grid.mask.copy()
-        write_to_file_field(self.file, raster.write_raster, 'tiff')
+        raster = xr.DataArray(raster).astype(float)
+        raster = raster.where(~xr.DataArray(grid.mask))
+        write_dataarray_to_field(self.file, raster, file_ext='tiff')
         
     class Meta:
         ordering = ['coded_label__group']
@@ -2238,7 +2237,7 @@ class CaseStudyDataset(models.Model):
         plt.figure()
         d = self.get_dataset(res=res, grid=grid)
         if grid is not None:
-            d.mask = ~(grid > 0)
+            d = xr.DataArray(d).where(xr.DataArray(grid) > 0)
         d.plot(cmap='jet')
 
         plt.savefig(out)
@@ -2385,7 +2384,7 @@ class CaseStudyRun(models.Model):
         else:
             gdf = _domain_area_to_gdf(self.domain_area)
             l = rg.read_df_like(self.casestudy.get_grid(), gdf)
-            l.mask = l==0
+            l = xr.DataArray(l).where(xr.DataArray(l) != 0)
             code = 'OUTPUTGRID'
             cl = CodedLabel.objects.get(code=code)
             # this override previous results
@@ -2393,7 +2392,7 @@ class CaseStudyRun(models.Model):
             csr_ol.file = None
             csr_ol.thumbnail = None
             csr_ol.save()
-            write_to_file_field(csr_ol.file, l.write_raster, 'tiff')
+            write_dataarray_to_field(csr_ol.file, l, file_ext='tiff')
             plot_map(l, csr_ol.thumbnail, ceamaxval=None, logcolor=False)
 
 

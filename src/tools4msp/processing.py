@@ -60,7 +60,7 @@ def get_resource(resource, grid=None, res=None, **kwargs):
             raster = rg.read_df_like(grid, geodataset, column=column, compute_area=compute_area)
         else:
             logger.debug('get_resource geodataset.dtype={}'.format(geodataset.dtype))
-            raster = geodataset.astype(np.float).to_srs_like(grid.astype(np.float))
+            raster = geodataset.astype(float).to_srs_like(grid.astype(float))
             # raster = domain_area_dataset.copy()
             # raster.reproject(geodataset)
     else:
@@ -68,6 +68,6 @@ def get_resource(resource, grid=None, res=None, **kwargs):
             raster = rg.read_df(geodataset, res, column=column)
         else:
             # the res parameter is ignored
-            raster = geodataset.copy().astype(np.float)
+            raster = geodataset.copy().astype(float)
 
     return raster
