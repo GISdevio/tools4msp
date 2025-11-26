@@ -25,21 +25,24 @@ def get_map_figure_size(extent, height=8.):
     return [width + 1, height]
 
 
-def plot_map(raster, file_field=None, ceamaxval=None, logcolor=True, cmap="jet", coast=False, grid=True, alpha=None, vmin=None, norm=None, extend='neither',
-             quantile_outliers=None):
+def plot_map(raster, file_field=None, ceamaxval=None, logcolor=True,
+             cmap="jet", coast=False, grid=True, alpha=None, vmin=None,
+             norm=None, extend='neither', quantile_outliers=None):
 
     if quantile_outliers is not None:
         # some functions (eg. quantiles) seem to ignore mask
         # so masked values are setted to nan
-        raster = raster.flattening_outliers(quantile_outliers)
+        # raster = raster.flattening_outliers(quantile_outliers)
+        pq = raster.quantile(quantile_outliers)
+        raster = raster.where(raster <= pq, pq)
         extend='max'
 
     fig = plt.figure(figsize=get_map_figure_size(raster.rio.bounds()))
     ax = fig.add_subplot(1, 1, 1)
     plot_norm = norm
     if logcolor:
-        _vmin = vmin if (vmin is not None and vmin > 0) else 1e-6
-        plot_norm = colors.LogNorm(vmin=_vmin, vmax=ceamaxval)
+        vmin = vmin if (vmin is not None and vmin > 0) else 1e-6
+        plot_norm = colors.LogNorm(vmin=vmin, vmax=ceamaxval)
     mapimg = raster.plot.imshow(ax=ax,
                                 cmap=cmap,
                                 norm=plot_norm,

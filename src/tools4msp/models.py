@@ -177,8 +177,9 @@ def _run_sua(csr, nparams=20, nruns=100, bygroup=True, njobs=1, calc_second_orde
                             kwargs_run=kwargs_run)
 
     module_cs_sua.cv[module_cs_sua.mean<0.01] = 0
-    module_cs_sua.cv = xr.DataArray(module_cs_sua.cv).where(~xr.DataArray(module_cs_sua.mean).isnull())
-    
+    module_cs_sua.cv = module_cs_sua.cv.where(module_cs_sua.mean >= 0.01, 0)
+    module_cs_sua.cv = module_cs_sua.cv.where(~module_cs_sua.mean.isnull())
+
     layers = {'MAPCEA-SUA-MEAN': module_cs_sua.mean,
               'MAPCEA-SUA-CV': module_cs_sua.cv,}
     for code, l in layers.items():
@@ -188,7 +189,9 @@ def _run_sua(csr, nparams=20, nruns=100, bygroup=True, njobs=1, calc_second_orde
         csr_ol.file = None
         csr_ol.thumbnail = None
         csr_ol.save()
-        write_to_file_field(csr_ol.file, l.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, l.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, l, file_ext='tiff')
+
         plot_map(l, csr_ol.thumbnail, ceamaxval=None, logcolor=False)
 
     code = 'MAPCEA-SUA-SSA'
@@ -269,21 +272,23 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='CEASCORE')
         csr_ol = csr.outputlayers.create(coded_label=cl, description=cl.description)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, ci, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail CEASCORE')
             # this is needed to exclude outliers
-            plot_map(ci.crop(), csr_ol.thumbnail, # xlogcolor=True,
+            plot_map(ci.rg.crop(), csr_ol.thumbnail, # xlogcolor=True,
                      vmin=0, quantile_outliers=0.98)
 
         logger.debug('saving MAPINDEX-CEARANKING')
         cl = CodedLabel.objects.get(code='MAPINDEX-CEARANKING')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, ci, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail MAPINDEX-CEARANKING')
-            ci[ci.mask] = np.nan
+            # ci[ci.mask] = np.nan
             # plot_map(ci / ci.max()*100, csr_ol.thumbnail, logcolor=True)
             _colors = ['#016c59', '#1c9099', '#67a9cf', '#a6bddb', '#d0d1e6', '#f6eff7',
                        '#fef0d9', '#fdd49e', '#fdbb84', '#fc8d59', '#e34a33', '#b30000']
@@ -297,10 +302,11 @@ def _run(_csr, runtypelevel=3):
             logger.debug(np.nanmax(ci))
             logger.debug(bounds)
             logger.debug(ci>=bounds[0])
-            plot_map(ci.masked_less(bounds[0], copy=True), csr_ol.thumbnail, # logcolor=True,
+            # plot_map(ci.masked_less(bounds[0], copy=True), csr_ol.thumbnail, # logcolor=True,
+            #         cmap=cmap, norm=norm)
+            plot_map(ci.where(ci>=bounds[0], np.nan), csr_ol.thumbnail, # logcolor=True,
                      cmap=cmap, norm=norm)
-            # 
-            
+
         # return 
         if compute_aggregate_stats:
             aggregated_layers['CEASCORE'] = ci
@@ -323,7 +329,8 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='MAPCEA-IMPACT-LEVEL')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, ci_impact_level.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, ci_impact_level.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, ci_impact_level, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail MAPCEA-IMPACT-LEVEL')
             plot_map(ci_impact_level, csr_ol.thumbnail, quantile_outliers=0.98)
@@ -334,7 +341,8 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='MAPCEA-RECOVERY-TIME')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, ci_recovery_time.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, ci_recovery_time.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, ci_recovery_time, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail MAPCEA-RECOVERY-TIME')
             plot_map(ci_recovery_time, csr_ol.thumbnail, quantile_outliers=0.98)
@@ -345,7 +353,8 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='MAPINDEX-EDIV')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, mapindex_ediv.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, mapindex_ediv.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, mapindex_ediv, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail MAPINDEX-EDIV')
             plot_map(mapindex_ediv, csr_ol.thumbnail, logcolor=False)
@@ -359,7 +368,8 @@ def _run(_csr, runtypelevel=3):
         cl = CodedLabel.objects.get(code='MAPINDEX-UDIV')
         csr_ol = csr.outputlayers.create(coded_label=cl)
         # print(np.nanmin(ci), np.nanmax(ci))
-        write_to_file_field(csr_ol.file, mapindex_udiv.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, mapindex_udiv.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, mapindex_udiv, file_ext='tiff')
         if runtypelevel >= 3:
             logger.debug('plotting and saving thumbnail MAPINDEX-UDIV')
             plot_map(mapindex_udiv, csr_ol.thumbnail, logcolor=False, quantile_outliers=0.98)
@@ -404,11 +414,11 @@ def _run(_csr, runtypelevel=3):
         filter_used_weights = module_cs.weights.usecode.isin(module_cs.layers.code)
         matrix = module_cs.weights[filter_used_weights]
         # remove pressures with all zeros in weights
-        _df = matrix.pivot('precode', 'usecode', 'weight')
+        _df = matrix.pivot(index='precode', columns='usecode', values='weight')
         non_empty_pressures_uses = _df.loc[(_df!=0).any(axis=1)].index
         filter_used_pressures = module_cs.weights.precode.isin(non_empty_pressures_uses)
         matrix = module_cs.weights[filter_used_weights & filter_used_pressures]
-        matrix = matrix.to_dict('record')
+        matrix = matrix.to_dict('records')
         write_to_file_field(csr_o.file, lambda buf: json.dump(matrix, buf), 'json', is_text_file=True)
         ax = plot_heatmap(matrix, 'usecode', 'precode', 'weight',
                           # scale_measure=1852,# nm conversion
@@ -455,11 +465,11 @@ def _run(_csr, runtypelevel=3):
         filter_used_sens = module_cs.sensitivities.envcode.isin(module_cs.layers.code)
         matrix = module_cs.sensitivities[filter_used_sens]
         # remove pressures with all zeros in weights
-        _df = matrix.pivot('precode', 'envcode', 'sensitivity')
+        _df = matrix.pivot(index='precode', columns='envcode', values='sensitivity')
         non_empty_pressures_envs = _df.loc[(_df!=0).any(axis=1)].index
         filter_used_pressures = module_cs.sensitivities.precode.isin(non_empty_pressures_envs)
         matrix = module_cs.sensitivities[filter_used_sens & filter_used_pressures]
-        matrix = matrix.to_dict('record')
+        matrix = matrix.to_dict('records')
         write_to_file_field(csr_o.file, lambda buf: json.dump(matrix, buf), 'json', is_text_file=True)
         ax = plot_heatmap(matrix, 'precode', 'envcode', 'sensitivity',
                           # scale_measure=1852,# nm conversion
@@ -591,7 +601,8 @@ def _run(_csr, runtypelevel=3):
             plist_str = ", ".join(CodedLabel.objects.filter(code__in=plist).values_list('label', flat=True))
             description = 'MSFD {} pressures: {}'.format(ptheme, plist_str)
             csr_ol = csr.outputlayers.create(coded_label=cl, description=description)
-            write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+            # write_to_file_field(csr_ol.file, ci.write_raster, 'tiff')
+            write_dataarray_to_field(csr_ol.file, ci, file_ext='tiff')
             logger.debug('plotting and saving thumbnail {}'.format(msfdcode))
             plot_map(ci, csr_ol.thumbnail, ceamaxval=ceamaxval, quantile_outliers=0.98)
 
@@ -616,7 +627,8 @@ def _run(_csr, runtypelevel=3):
         out = module_cs.outputs['muc']
         cl = CodedLabel.objects.get(code='MUCSCORE')
         csr_ol = csr.outputlayers.create(coded_label=cl)
-        write_to_file_field(csr_ol.file, out.write_raster, 'tiff')
+        # write_to_file_field(csr_ol.file, out.write_raster, 'tiff')
+        write_dataarray_to_field(csr_ol.file, out, file_ext='tiff')
         plt.figure(figsize=get_map_figure_size(out.rio.bounds()))
         ax, mapimg = out.plotmap(#ax=ax,
                    cmap='jet',
@@ -640,7 +652,7 @@ def _run(_csr, runtypelevel=3):
         filter_triu = np.triu(np.ones(matrix.shape), k=1).astype(np.bool)
         matrix = matrix.where(filter_triu)
         matrix = matrix.stack().reset_index(name='score')
-        matrix = matrix.to_dict('record')
+        matrix = matrix.to_dict('records')
         
         write_to_file_field(csr_o.file, lambda buf: json.dump(matrix, buf), 'json', is_text_file=True)
         ax = plot_heatmap(matrix, 'u1', 'u2', 'score',
@@ -688,7 +700,7 @@ def _run(_csr, runtypelevel=3):
         CRS = cartopy.crs.Mercator()
 
         cropped = time_rasters[-1][1].copy()  # crop last cumraster
-        cropped = cropped.crop(value=0)
+        cropped = cropped.rg.crop(value=0)
 
         def update_frame(iternum, *fargs):
             rindex = fargs[0]
@@ -698,7 +710,7 @@ def _run(_csr, runtypelevel=3):
             raster = time_rasters[iternum][rindex]
             raster = raster.to_srs_like(cropped)
             # raster[:] = 0
-            raster = xr.DataArray(raster).where(raster > 0.0001)
+            raster = raster.where(raster > 0.0001)
             plt.title("Hours: {}".format(time_step))
             # remove legends
             legend = True
@@ -741,7 +753,8 @@ def _run(_csr, runtypelevel=3):
         write_to_file_field(csr_o.thumbnail, write_to_buffer, 'gif', aniobj=ani)
         plt.clf()
 
-        write_to_file_field(csr_o.file, time_rasters[-1][1].copy().write_raster, 'tiff')
+        # write_to_file_field(csr_o.file, time_rasters[-1][1].copy().write_raster, 'tiff')
+        write_dataarray_to_field(csr_o.file, time_rasters[-1][1].copy(), file_ext='tiff')
 
         fig, ax = plt.subplots(figsize=[12, 12], subplot_kw={'projection': CRS})
         fig.set_tight_layout(True)
@@ -756,7 +769,8 @@ def _run(_csr, runtypelevel=3):
 
         write_to_file_field(csr_o.thumbnail, write_to_buffer, 'gif', aniobj=ani)
         plt.clf()
-        write_to_file_field(csr_o.file, time_rasters[-1][2].copy().write_raster, 'tiff')
+        # write_to_file_field(csr_o.file, time_rasters[-1][2].copy().write_raster, 'tiff')
+        write_dataarray_to_field(csr_o.file, time_rasters[-1][2].copy(), file_ext='tiff')
         return csr.id
 
     elif csr.casestudy.module == 'pmar':
@@ -788,7 +802,8 @@ def _run(_csr, runtypelevel=3):
             cl = CodedLabel.objects.get(code=c)
             csr_ol = csr.outputlayers.create(coded_label=cl)
             # print(np.nanmin(ci), np.nanmax(ci))
-            write_to_file_field(csr_ol.file, layer['output'].write_raster, 'tiff')
+            # write_to_file_field(csr_ol.file, layer['output'].write_raster, 'tiff')
+            write_dataarray_to_field(csr_ol.file, layer['output'], file_ext='tiff')
             write_to_file_field(csr_ol.thumbnail, layer['thumbnail'].save, 'png', format='PNG')
             # plot_map(layer, csr_ol.thumbnail)
 
@@ -801,7 +816,8 @@ def _run(_csr, runtypelevel=3):
             cl = CodedLabel.objects.get(code=c)
             csr_ol = csr.outputlayers.create(coded_label=cl)
             # print(np.nanmin(ci), np.nanmax(ci))
-            write_to_file_field(csr_ol.file, layer['layer'].write_raster, 'tiff')
+            # write_to_file_field(csr_ol.file, layer['layer'].write_raster, 'tiff')
+            write_dataarray_to_field(csr_ol.file, layer['output'], file_ext='tiff')
             plot_map(layer['layer'], csr_ol.thumbnail)
             # def save_shp_wrapper(buf):
             #     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -936,8 +952,9 @@ def _domain_area_to_gdf(domain_area):
     feature = wkt.loads(domain_area.wkt)
     # TODO: there is a problem on lat, lon order
     # revert lat, lon order
-    _feature = transform(lambda x, y: (y, x), feature)
-    gdf = gpd.GeoDataFrame([{'geometry': _feature}], geometry='geometry', crs='epsg:4326')
+    # _feature = transform(lambda x, y: (y, x), feature)
+    # gdf = gpd.GeoDataFrame([{'geometry': _feature}], geometry='geometry', crs='epsg:4326')
+    gdf = gpd.GeoDataFrame([{'geometry': feature}], geometry='geometry', crs='epsg:4326')
     return gdf
     
 def _guess_ncells(domain_area, resolution):
@@ -1045,7 +1062,7 @@ class CaseStudy(models.Model):
         else:
             gdf = self.domain_area_to_gdf()
             l = rg.read_df(gdf, self.resolution, epsg=3035, rounded_bounds=True)
-            l = xr.DataArray(l).where(xr.DataArray(l) != 0)
+            l = l.where(l != 0)
             code = 'GRID'
             cl = CodedLabel.objects.get(code=code)
             # this override previous results
@@ -1061,7 +1078,7 @@ class CaseStudy(models.Model):
 
     def set_or_update_input(self, coded_label, context_label, vizmode=1, cl_sorter=None, overwrite=False):
         cl = CodedLabel.objects.get(code=coded_label)
-        layers_info =  {d['layer']: "sum={sumval:.2f}, min={minval:.2f}, max={maxval:.2f} mean={meanval:.2f}".format(**json.loads(d['layerinfo'])) for d in self.layers.all().values('layerinfo', layer=F('coded_label__code'))}
+        layers_info =  {d['layer']: "sum={sumval:.2f}, min={minval:.2f}, max={maxval:.2f} mean={meanval:.2f}".format(**d['layerinfo']) for d in self.layers.all().values('layerinfo', layer=F('coded_label__code'))}
         layers_list = list(layers_info.keys())
         ## append usepre
         codedlabels_list = layers_list
@@ -1532,7 +1549,12 @@ class CaseStudy(models.Model):
                 csr.domain_area = i
                 csr.set_update_outputgrid()
 
-            async_task(run_wrapper, csr.pk, runtypelevel, hook="tools4msp.hooks.set_runstatus")
+            # DISABILITO l'async per testare. poi var ripristinato
+            ###############################################
+            # async_task(run_wrapper, csr.pk, runtypelevel, hook="tools4msp.hooks.set_runstatus")
+            csrid = _run(csr.pk, runtypelevel=runtypelevel)
+            ################################################
+
             rlist = self.casestudyrun_set.filter(pk=csr.pk)
         else:
             import time
@@ -1706,8 +1728,8 @@ class CaseStudyLayer(LayerInfoMixin):
     def mask_layer_with_grid(self):
         grid = self.casestudy.get_grid()
         raster = rg.read_raster(self.file.path)
-        raster = xr.DataArray(raster).astype(float)
-        raster = raster.where(~xr.DataArray(grid.mask))
+        # raster = xr.DataArray(raster).astype(float)
+        raster = raster.where(grid>0)
         write_dataarray_to_field(self.file, raster, file_ext='tiff')
         
     class Meta:
@@ -1738,7 +1760,7 @@ class CodedLabelManager(models.Manager):
 # class CodedLabel(MP_Node):
 class CodedLabel(models.Model):
     group = models.CharField(max_length=10, choices=CODEDLABEL_GROUP_CHOICES)
-    code = models.SlugField(max_length=20, unique=True)
+    code = models.SlugField(max_length=25, unique=True)
     label = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     fa_class = models.CharField(max_length=64, default='fa-circle')
@@ -2237,7 +2259,7 @@ class CaseStudyDataset(models.Model):
         plt.figure()
         d = self.get_dataset(res=res, grid=grid)
         if grid is not None:
-            d = xr.DataArray(d).where(xr.DataArray(grid) > 0)
+            d = d.where(grid>0)
         d.plot(cmap='jet')
 
         plt.savefig(out)
@@ -2384,7 +2406,7 @@ class CaseStudyRun(models.Model):
         else:
             gdf = _domain_area_to_gdf(self.domain_area)
             l = rg.read_df_like(self.casestudy.get_grid(), gdf)
-            l = xr.DataArray(l).where(xr.DataArray(l) != 0)
+            l = l.where(l !=0 )
             code = 'OUTPUTGRID'
             cl = CodedLabel.objects.get(code=code)
             # this override previous results
