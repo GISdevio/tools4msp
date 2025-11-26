@@ -208,8 +208,8 @@ class CaseStudyBase(object):
         if code is not None:
             if code not in layerref.keys():
                 return False
-            _r = self.read_raster(layerref[code]['f']).fill_underlying_data(0)
-            _r.crs = rg.utils.parse_projection('epsg:3035') 
+            _r = self.read_raster(layerref[code]['f']) # .fill_underlying_data(0)
+            # _r.crs = rg.utils.parse_projection('epsg:3035')
             self.add_layer(_r,
                            code,
                            layerref[code]['code_group'],
@@ -222,8 +222,8 @@ class CaseStudyBase(object):
                 pass
             else:
                 raster = None
-            _r = self.read_raster(layerref[_code]['f']).fill_underlying_data(0)
-            _r.crs = rg.utils.parse_projection('epsg:3035')
+            _r = self.read_raster(layerref[_code]['f']) # .fill_underlying_data(0)
+            # _r.crs = rg.utils.parse_projection('epsg:3035')
             self.add_layer(_r,
                            _code,
                            layerref[_code]['code_group'],
@@ -342,7 +342,7 @@ class CaseStudyBase(object):
         if self.layer_preprocessed and not force:
             return True
         if self.layer_weights is not None:
-            weights = self.layer_weights.pivot('layer', 'param', 'weight')
+            weights = self.layer_weights.pivot(index='layer', columns='param', values='weight')
             def _get_value(layer, param, default=None):
                 try:
                     return weights.at[layer, param]
