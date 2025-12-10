@@ -1078,7 +1078,7 @@ class CaseStudy(models.Model):
 
     def set_or_update_input(self, coded_label, context_label, vizmode=1, cl_sorter=None, overwrite=False):
         cl = CodedLabel.objects.get(code=coded_label)
-        layers_info =  {d['layer']: "sum={sumval:.2f}, min={minval:.2f}, max={maxval:.2f} mean={meanval:.2f}".format(**json.loads(d['layerinfo'])) for d in self.layers.all().values('layerinfo', layer=F('coded_label__code'))}
+        layers_info =  {d['layer']: "sum={sumval:.2f}, min={minval:.2f}, max={maxval:.2f} mean={meanval:.2f}".format(**d['layerinfo']) for d in self.layers.all().values('layerinfo', layer=F('coded_label__code'))}
         layers_list = list(layers_info.keys())
         ## append usepre
         codedlabels_list = layers_list
