@@ -9,6 +9,7 @@
 # ///
 
 import os
+from pathlib import Path
 import matplotlib.pyplot as plt
 import requests
 import time
@@ -59,8 +60,10 @@ print("Uploading Human use")
 code = 'B-TRAWL'
 clurl = tclient.client.action(tclient.schema, ['codedlabels', 'read'],
                               params={'code': code})['url']
+tif_dir = Path(__file__).parent / 'data'
+use_tif_path = tif_dir / 'use-B-TRAWL.tiff'
 tclient.create_and_upload('layers', csid, clurl,
-                          'data/use-B-TRAWL.tiff',
+                          use_tif_path,
                           replace=True)
 
 # upload an "Environmental component" layer
@@ -68,8 +71,9 @@ print("Uploading Env component")
 code = 'NV'
 clurl = tclient.client.action(tclient.schema, ['codedlabels', 'read'],
                               params={'code': code})['url']
+env_tif_path = tif_dir / 'env-NV.tiff'
 tclient.create_and_upload('layers', csid, clurl,
-                          'data/env-NV.tiff',
+                          env_tif_path,
                           replace=True)
 
 # run the case study async mode
