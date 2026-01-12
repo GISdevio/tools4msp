@@ -104,7 +104,7 @@ VIZMODE_CHOICES = (
 )
 
 
-TOOLS4MSP_BASEDIR = '/var/www/geonode/static/cumulative_impact'
+TOOLS4MSP_BASEDIR = settings.TOOLS4MSP_BASEDIR
 
 VISIBILITY_CHOICES = ((0, 'private'), (1, 'hidden'), (2, 'public'))
 
